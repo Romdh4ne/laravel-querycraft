@@ -57,8 +57,10 @@ class QueryAnalysisService
 
         // ── success ───────────────────────────────────────────────────────────
         $queries = QueryCollector::getQueries();
-        $issues = $this->runAnalyzers($queries);
-        $score = $this->calculateScore($queries, $issues);
+        dd($queries);
+        $issues = $this->runAnalyzers($queries, $options['config'] ?? []);
+        $score = $this->calculateScore($queries, $issues, $options['config'] ?? []);
+
 
         return [
             'success' => true,
@@ -357,13 +359,31 @@ class QueryAnalysisService
             auth()->login($user);
     }
 
-    protected function runAnalyzers(array $queries): array
+    protected function runAnalyzers(array $queries, array $config = []): array
     {
         $issues = [];
-        $issues = array_merge($issues, (new N1Detector($queries))->detect());
-        $issues = array_merge($issues, (new IndexAnalyzer($queries))->detect());
-        $issues = array_merge($issues, (new SlowQueryDetector($queries))->detect());
-        $issues = array_merge($issues, (new DuplicateQueryDetector($queries))->detect());
+
+        $n1Threshold = $config['thresholds']['n1_count'] ?? config('querycraft.thresholds.n1_count', 5);
+        $slowThreshold = $config['thresholds']['slow_query_ms'] ?? config('querycraft.thresholds.slow_query_ms', 100);
+        $duplicateThreshold = $config['thresholds']['duplicate_count'] ?? config('querycraft.thresholds.duplicate_count', 2);
+
+        $detectors = $config['detectors'] ?? config('querycraft.detectors');
+
+        if ($detectors['n1'] ?? true) {
+            $issues = array_merge($issues, (new N1Detector($queries, $n1Threshold))->detect());
+        }
+
+        if ($detectors['missing_index'] ?? true) {
+            $issues = array_merge($issues, (new IndexAnalyzer($queries))->detect());
+        }
+
+        if ($detectors['slow_query'] ?? true) {
+            $issues = array_merge($issues, (new SlowQueryDetector($queries, $slowThreshold))->detect());
+        }
+
+        if ($detectors['duplicate_query'] ?? true) {
+            $issues = array_merge($issues, (new DuplicateQueryDetector($queries, $duplicateThreshold))->detect());
+        }
 
         usort($issues, function ($a, $b) {
             $order = ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3];
@@ -373,9 +393,10 @@ class QueryAnalysisService
         return $issues;
     }
 
-    protected function calculateScore(array $queries, array $issues): array
+    protected function calculateScore(array $queries, array $issues, array $config = []): array
     {
-        return (new PerformanceScorer($queries, $issues))->calculate();
+        $weights = $config['weights'] ?? config('querycraft.weights');
+        return (new PerformanceScorer($queries, $issues, $weights))->calculate();
     }
 
     public function getIssueStatistics(array $issues): array

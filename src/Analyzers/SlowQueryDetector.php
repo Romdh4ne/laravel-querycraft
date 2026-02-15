@@ -7,6 +7,16 @@ class SlowQueryDetector
     protected $queries;
     protected $threshold;
 
+    // Paths to skip when looking for app code
+    protected array $skipPaths = [
+        '/vendor/',
+        '/vendor/laravel/',
+        'Illuminate/',
+        'Sanctum/',
+        'QueryCraft/',
+        'QueryCollector',
+    ];
+
     public function __construct(array $queries, int $threshold = 100)
     {
         $this->queries = $queries;
@@ -28,6 +38,7 @@ class SlowQueryDetector
                     'query' => $query['sql'],
                     'time' => round($query['time'], 2),
                     'threshold' => $this->threshold,
+                    'location' => $this->findSourceLocation($query['backtrace'] ?? []),
                     'suggestion' => $this->analyzeSlow($query),
                 ];
             }
@@ -35,6 +46,67 @@ class SlowQueryDetector
 
         return $issues;
     }
+
+    protected function findSourceLocation(array $backtrace): array
+    {
+        $basePath = base_path();
+
+        foreach ($backtrace as $frame) {
+            $file = $frame['file'] ?? '';
+            $line = $frame['line'] ?? 0;
+
+            if (empty($file)) {
+                continue;
+            }
+
+            // Skip every vendor / framework / package frame
+            if ($this->shouldSkip($file)) {
+                continue;
+            }
+
+            // Relativise path so it's readable
+            $relativePath = str_replace($basePath, '', $file);
+
+            return [
+                'file' => $relativePath,
+                'line' => $line,
+            ];
+        }
+
+        // Second pass: if nothing found, look for any frame inside
+        // the project root (i.e., NOT in vendor/)
+        foreach ($backtrace as $frame) {
+            $file = $frame['file'] ?? '';
+            if (
+                !empty($file)
+                && str_starts_with($file, $basePath)
+                && !str_contains($file, '/vendor/')
+            ) {
+                return [
+                    'file' => str_replace($basePath, '', $file),
+                    'line' => $frame['line'] ?? 0,
+                ];
+            }
+        }
+
+        return ['file' => 'Unknown', 'line' => 0];
+    }
+
+
+    /**
+     * Returns true if this file should be skipped (framework / vendor).
+     */
+    protected function shouldSkip(string $file): bool
+    {
+        foreach ($this->skipPaths as $skip) {
+            if (str_contains($file, $skip)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 
     /**
      * Calculate severity

@@ -31,6 +31,7 @@ class IndexAnalyzer
                         'query' => $query['sql'],
                         'table' => $explain['table'] ?? 'unknown',
                         'rows_examined' => $explain['rows'] ?? 0,
+                        'location' => ['file' => 'Unknown', 'line' => 0],
                         'suggestion' => $this->suggestIndex($query['sql']),
                     ];
                 }

@@ -258,7 +258,7 @@
                             </div>
 
                             {{-- File Location --}}
-                            <div x-show="issue.location && issue.location.file !== 'Unknown'"
+                            <div x-show="issue.location && issue.location?.file !== 'Unknown'"
                                  class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                                 <div class="flex items-start gap-2.5">
                                     <svg class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,19 +272,20 @@
                                         <div class="flex flex-wrap items-center gap-2">
                                             <div class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-700 rounded-md px-2.5 py-1.5 min-w-0">
                                                 <code class="file-path-badge text-gray-700 dark:text-gray-300 truncate max-w-[260px]"
-                                                      x-text="shortenPath(issue.location.file)"
-                                                      :title="issue.location.file"></code>
+                                                      x-text="shortenPath(issue.location?.file)"
+                                                      :title="issue.location?.file"></code>
                                             </div>
-                                            <div x-show="issue.location.line > 0"
+                                            <div x-show="issue.location?.line > 0"
                                                  class="flex items-center gap-1.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md px-2.5 py-1.5 flex-shrink-0">
                                                 <svg class="w-3.5 h-3.5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
                                                 </svg>
                                                 <span class="file-path-badge font-bold text-red-600 dark:text-red-400">
-                                                    Line <span x-text="issue.location.line"></span>
+                                                    Line <span x-text="(issue.location?.file ?? 'Unknown') + ':' + (issue.location?.line ?? 0)"
+                                                    ></span>
                                                 </span>
                                             </div>
-                                            <button @click="navigator.clipboard.writeText(issue.location.file + ':' + issue.location.line)"
+                                            <button @click="navigator.clipboard.writeText(issue.location?.file + ':' + issue.location?.line)"
                                                     class="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors ml-auto"
                                                     title="Copy path">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

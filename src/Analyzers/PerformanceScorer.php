@@ -7,12 +7,21 @@ class PerformanceScorer
     protected $queries;
     protected $issues;
     protected $totalTime;
+    protected $weights;
 
-    public function __construct(array $queries, array $issues = [])
+
+
+
+    public function __construct(array $queries, array $issues = [], array $weights = [])
     {
         $this->queries = $queries;
         $this->issues = $issues;
         $this->totalTime = array_sum(array_column($queries, 'time'));
+        $this->weights = [
+            'query_count' => $weights['query_count'] ?? 40,
+            'query_time' => $weights['query_time'] ?? 30,
+            'issues' => $weights['issues'] ?? 30,
+        ];
     }
 
     /**
@@ -26,7 +35,11 @@ class PerformanceScorer
             'issues' => $this->scoreIssues(),
         ];
 
-        $totalScore = array_sum($scores) / count($scores);
+        $totalScore =
+            ($scores['query_count'] * $this->weights['query_count'] / 100) +
+            ($scores['query_time'] * $this->weights['query_time'] / 100) +
+            ($scores['issues'] * $this->weights['issues'] / 100);
+
 
         return [
             'score' => round($totalScore),
@@ -35,6 +48,9 @@ class PerformanceScorer
             'suggestions' => $this->getSuggestions($scores),
         ];
     }
+
+
+
 
     /**
      * Score based on query count
