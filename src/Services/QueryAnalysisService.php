@@ -57,7 +57,6 @@ class QueryAnalysisService
 
         // ── success ───────────────────────────────────────────────────────────
         $queries = QueryCollector::getQueries();
-        dd($queries);
         $issues = $this->runAnalyzers($queries, $options['config'] ?? []);
         $score = $this->calculateScore($queries, $issues, $options['config'] ?? []);
 
